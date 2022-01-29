@@ -1,0 +1,66 @@
+from tensorflow.keras.datasets import fashion_mnist
+import matplotlib.pyplot as plt
+
+(train_x, train_y), (test_x, test_y) = fashion_mnist.load_data()     #2차원인 흑백 이미지 데이터
+
+train_x.shape, train_y.shape     #3차원인 넘파이배열로 표현됨 60000은 사진의 개수, 28,28은 가로 세로 크기
+
+test_x.shape, test_y.shape
+
+train_x[:10]
+
+train_x = train_x.reshape((-1,28,28,1))
+#train_x = train_x.reshape((60000,28,28,1))  ----> 동일
+test_x = test_x.reshape((-1,28,28,1))
+
+train_x.shape, test_x.shape
+
+from tensorflow.keras import models, layers
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPool2D
+
+model = models.Sequential()
+
+# 1st Conv2D  -filter_cnt : 32  -kerner_size : (3,3)  -relu
+model.add(layers.Conv2D(filters=32, kernel_size=3, activation='relu', input_shape=(28,28,1), name = 'block_1_conv'))
+
+# 1st max pooling  -pool_size = (2,2)
+model.add(layers.MaxPool2D(pool_size=2, name = 'block_1_pool'))
+
+#2nd Conv2D - filter_cnt : 64 -kerner_size: (3,3) -relu
+model.add(layers.Conv2D(filters=64, kernel_size=3, activation='relu', name = 'block_2_conv'))
+
+#2nd max pooling - pool_size = (2,2) 
+model.add(layers.MaxPool2D(pool_size=2, name = 'block_2_pool'))
+
+#3rd Conv2D - filter_cnt : 64 -kerner_size : (3,3) -relu
+model.add(layers.Conv2D(filters=64, kernel_size=3, activation='relu', name = 'block_3_conv'))
+
+#Flatten
+model.add(layers.Flatten())
+
+#classification module
+model.add(layers.Dense(units=64, activation='relu'))
+model.add(layers.Dense(units=10, activation='softmax'))
+
+
+model.summary()
+
+#학습 환경 설정
+model.compile(loss='sparse_categorical_crossentropy',  # 손실 함수 설정
+              optimizer='rmsprop',                     # 훈련과정을 설정. 즉, 최적화 알고리즘을 설정을 의미
+              metrics=['accuracy'])                    # (평가지표)훈련을 모니터링 하기 위해 사용, 'accuracy'는 분류기의 성능을 측정할 때 가장 간단히 사용할 수 있음
+
+# fit()를 호출하여 데이터를 "batch_size" 크기의 "배치"로 분할하고 지정된 수의 "epoch"에 대해 전체 데이터세트를 반복 처리하여 모델을 훈련시킵니다.
+history = model.fit(x=train_x, y=train_y,
+          epochs=50,
+          batch_size=128,
+          validation_split=0.2)
+
+loss, acc = model.evaluate(x=test_x, y=test_y)    #test mode 에서 모델에 대한 loss 값 및 metric(여기서는 지정해준 metric 인 'accuracy') 값을 반환
+
+
+
+
+
