@@ -1,0 +1,103 @@
+import tensorflow as tf
+import numpy as np
+import requests
+import io
+
+# label 데이터의 각 value 에 해당하는 class name 정보
+cifar_label_name=['apple', 'beaver', 'bottle', 'butterfly', 'castle',
+'clock', 'couch', 'leopard', 'rose', 'shark']
+# 데이터 다운로드 url 경로
+data_url = 'https://codepresso-online-platform-public.s3.ap-northeast-2.amazonaws.com/learning-resourse/Tensorflow+2.0+%EB%94%A5%EB%9F%AC%EB%8B%9D+%EC%99%84%EB%B2%BD+%EA%B0%80%EC%9D%B4%EB%93%9C/cifar-10-codepresso.npz'
+
+# requests 라이브러리를 이용해 데이터 다운로드
+response = requests.get(data_url)
+response.raise_for_status()
+
+# 다운로드 받은 데이터를 읽어 들여 Input tensor 와 Target tensor 준비
+with np.load(io.BytesIO(response.content)) as cifar_10_codepresso_data:
+# 학습 이미지 데이터(np.ndarry, shape=(5000, 32, 32, 3))
+  train_images = cifar_10_codepresso_data['train_images']
+# 학습 라벨 데이터(np.ndarry, shape=(5000, ))
+  train_labels = cifar_10_codepresso_data['train_labels']
+
+# 테스트 이미지 데이터(np.ndarry, shape=(1000, 32, 32, 3))
+  test_images = cifar_10_codepresso_data['test_images']
+# 테스트 라벨 데이터(np.ndarry, shape=(1000, ))
+  test_labels = cifar_10_codepresso_data['test_labels']
+
+train_images.shape, train_labels.shape   #컬러 이미지는 3차원 데이터이므로, shape로 확인하면 4차원 넘파이 배열이 나온다. 5000장의 사진 개수, 3은 RGB의 컬러채널 개수
+
+test_images.shape, test_labels.shape
+
+train_labels.shape, test_labels.shape
+
+train_images[4999]
+
+#0부터 1사이의 값으로 스케일링
+train_images = train_images/255.
+test_images = test_images/255.
+
+#케라스는 정수 인코딩 된 결과로부터 원-핫 인코딩을 수행하는 to_categorical()를 지원
+from tensorflow.keras.utils import to_categorical
+
+train_labels = to_categorical(train_labels) 
+test_labels = to_categorical(test_labels)
+
+train_labels.shape, test_labels.shape
+
+from tensorflow.keras import models, layers
+model = models.Sequential()
+
+# 1st Conv2D  -filter_cnt : 16  -kerner_size : (3,3)  -relu
+model.add(layers.Conv2D(filters=16, kernel_size=(3,3), activation='relu', input_shape=(32,32,3), name = 'block_1_conv'))
+
+# 1st max pooling  -pool_size = (2,2)
+model.add(layers.MaxPool2D(pool_size=(2,2), name = 'block_1_pool'))
+
+#2nd Conv2D - filter_cnt : 32 -kerner_size: (3,3) -relu
+model.add(layers.Conv2D(filters=32, kernel_size=(3,3), activation='relu', name = 'block_2_conv'))
+
+#2nd max pooling - pool_size = (2,2) 
+model.add(layers.MaxPool2D(pool_size=(2,2), name = 'block_2_pool'))
+
+#3rd Conv2D - filter_cnt : 64 -kerner_size : (3,3) -relu
+model.add(layers.Conv2D(filters=64, kernel_size=(3,3), activation='relu', name = 'block_3_conv'))
+
+#Flatten
+model.add(layers.Flatten())
+
+#classification module
+#model.add(layers.Dense(units=64, activation='relu'))  #hidden layer
+#model.add(layers.Dense(units=10, activation='softmax'))  #output layer
+model.add(layers.Dense(units=10)) # softmax를 뺀 output layer
+
+#model.add(layers.Conv2D(filters=16, kernel_size=3, activation='relu', input_shape=(28,28,1)))
+#model.add(layers.MaxPool2D(pool_size=2))
+#model.add(layers.Conv2D(filters=32, kernel_size=3, activation='relu'))
+#model.add(layers.MaxPool2D(pool_size=2))
+#model.add(layers.Conv2D(filters=64, kernel_size=3, activation='relu'))
+#model.add(layers.Flatten())
+#model.add(layers.Dense(units=64, activation='relu'))
+#model.add(layers.Dense(units=10, activation='softmax'))
+
+model.summary()
+
+#model.compile(optimizer='rmsprop',loss = 'categorical_crossentropy', metrics=['accuracy'])
+#아래 코드와 동일
+model.compile(optimizer='rmsprop',loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True), metrics=['accuracy'])
+
+model.fit(x=train_images, y=train_labels,
+          epochs=100,
+          batch_size=64,
+          validation_split=0.2)
+
+test_images[:2].shape
+
+pred = model.predict(test_images[:2])
+
+pred_idx = pred.argmax(axis = 1)
+
+pred_idx
+
+loss, accuracy = model.evaluate(test_images, test_labels)
+
